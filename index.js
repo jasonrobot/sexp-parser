@@ -261,28 +261,21 @@ const parseExpression = ( expression ) => {
 
     expression = expression.trim();
 
-    if ( expression[ 0 ] != '(' &&
-         expression[ -1 ] != ')' ) {
-        throw 'That\'s not a s-expression.';
+    if ( not( isParensBalanced( expression ) ) ) {
+        throw 'Unbalanced parens in expression.';
     }
 
-    //now, should just have the contents of the expr
-    expression = expression.trim().substring( 1, expression.length - 1 );
-
-    let index = 0;
-    while ( index < expression.length ) {
-        let char = expression[ index ];
-
-        while ( expression[ index ] === ' ' ) {
-            index += 1;
-        }
-
-        let parsedSymbol;
-
-        index += parsedSymbol.length;
-
-        parsedSymbol = tryParseSexp( expression, index );
+    if ( not( isQuotesBalanced( expression ) ) ) {
+        throw 'Unbalanced quotes in expression.';
     }
+
+    let {data: sexpParseResult} = tryParseSexp( expression, 0 );
+
+    if ( sexpParseResult === null ) {
+        throw 'Parsing error in recursive descent.';
+    }
+
+    return sexpParseResult;
 };
 
 const test = require( 'tape' );
