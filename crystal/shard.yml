@@ -1,0 +1,13 @@
+name: s_expression_parser
+version: 0.1.0
+
+authors:
+  - Jason Howell <jasonrobot64@gmail.com>
+
+targets:
+  s_expression_parser:
+    main: src/s_expression_parser.cr
+
+crystal: 0.27.0
+
+license: MIT

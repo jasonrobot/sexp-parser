@@ -1,0 +1,9 @@
+{
+    "main": "index.js",
+    "dependencies": {
+        "tape": "4.10.1"
+    },
+    "scripts": {
+        "run": "node index.js"
+    }
+}
