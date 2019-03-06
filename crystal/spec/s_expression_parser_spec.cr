@@ -5,17 +5,25 @@ include SExpressionParser
 describe SExpressionParser do
   # TODO: Write tests
 
-  describe "endOfSymbol?" do
-    it "should be true for )" do
-      endOfSymbol?(')').should eq true
+  describe "endOfSymbol" do
+    it "should be 0 for )" do
+      endOfSymbol(")").should eq 0
     end
 
     # it "should be true for \"\"" do
-    #   endOfSymbol?("").should eq true
+    #   endOfSymbol("").should eq true
     # end
 
-    it "should be true for \" \"" do
-      endOfSymbol?(' ').should eq true
+    it "should be 0 for \" \"" do
+      endOfSymbol(" ").should eq 0
+    end
+
+    it "should be 2 for '12)'" do
+      endOfSymbol("12)").should eq 2
+    end
+
+    it "should be 2 for '12'" do
+      endOfSymbol("12").should eq 2
     end
   end
 
@@ -36,21 +44,21 @@ describe SExpressionParser do
 
   describe "parseBool" do
     it "should parse true for \"T\"" do
-      parseBool("T").should eq true
+      parseBool("T", 0).data.should eq true
     end
 
     it "should parse false for \"NIL\"" do
-      parseBool("NIL").should eq false
+      parseBool("NIL", 0).data.should eq false
     end
 
     it "should parse nil for a number" do
-      parseBool("69").should eq nil
+      parseBool("69", 0).data.should eq nil
     end
   end
 
   describe "parseString" do
     it "should parse a plain string" do
-      parseString("\"asdf\"").should eq "asdf"
+      parseString("\"asdf\"", 0).data.should eq "\"asdf\""
     end
 
 
@@ -58,49 +66,55 @@ describe SExpressionParser do
 
   describe "parseSymbol" do
     it "should parse :foo as :foo" do
-      parseSymbol(":foo").should eq ":foo"
+      parseSymbol(":foo", 0).data.should eq ":foo"
     end
 
     # it "should not trip on trailing paren" do
-    #   parseSymbol(":bar)").should eq ":bar"
+    #   parseSymbol(":bar)", 0).data.should eq ":bar"
     # end
 
     it "should preserve case" do
-      parseSymbol(":cAsEsEnSiTiVe").should eq ":cAsEsEnSiTiVe"
+      parseSymbol(":cAsEsEnSiTiVe", 0).data.should eq ":cAsEsEnSiTiVe"
     end
   end
 
   describe "parseNumber" do
-    it "should parse any valid float" do
-      parseNumber("12").should eq 12
+    it "should parse 12" do
+      parseNumber("12", 0).data.should eq 12
+    end
 
-      parseNumber("-1").should eq -1
+    it "should parse -1" do
+      parseNumber("-1", 0).data.should eq -1
+    end
 
-      parseNumber("0.5").should eq 0.5
+    it "should parse 0.5" do
+      parseNumber("0.5", 0).data.should eq 0.5
+    end
 
-      parseNumber("-.1").should eq -0.1
+    it "should parse -.1" do
+      parseNumber("-.1", 0).data.should eq -0.1
     end
   end
 
-  xdescribe "parseSexp" do
+  describe "parseSexp" do
     it "should parse a list" do
-      parseSexp("(1 2 3)").should eq [1, 2, 3]
+      parseSexp("(1 2 3)", 0).data.should eq [1, 2, 3]
     end
 
     it "should parse empty list" do
-      parseSexp("()").should eq [] of Result
+      parseSexp("()", 0).data.should eq [] of Result
     end
 
     describe "nested expressions" do
 
       it "should parse nested lists" do
-        parseSexp("(1 (2 3) 4)").should eq [1, [2, 3], 4]
+        parseSexp("(1 (2 3) 4)", 0).data.should eq [1, [2, 3], 4]
       end
 
-      # it "should parse nested empty lists" do
-      #   parseSexp("(())").should eq [[] of Result] of Result
-      #   parseSexp("( ( ) )").should eq [[] of Result] of Result
-      # end
+      it "should parse nested empty lists" do
+        parseSexp("(())", 0).data.should eq [[] of Result] of Result
+        parseSexp("( ( ) )", 0).data.should eq [[] of Result] of Result
+      end
 
     end
 

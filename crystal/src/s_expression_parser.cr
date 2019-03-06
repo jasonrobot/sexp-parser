@@ -17,9 +17,9 @@ module SExpressionParser
 
   struct ParseResult
     property data : Result,
-             position : Int32
+             nextPosition : Int32
 
-    def initialize(@data, @position)
+    def initialize(@data, @nextPosition)
     end
 
     def succes? : Bool
@@ -31,8 +31,8 @@ module SExpressionParser
     char.nil? || char == ' ' || char == ')'
   end
 
-  def endOfSymbol(expression, position = 0)
-    expression.index /[\s)]/, position
+  def endOfSymbol(expression, position = 0) : Int32
+    expression.index(/[\s)]/, position) || expression.size
   end
 
   def chompWhitespace(expression, position)
@@ -52,7 +52,7 @@ module SExpressionParser
     end
   end
 
-  def parseSymbol(expression, position) : ParseResult
+  def parseSymbol(expression, position : Int32) : ParseResult
     return ParseResult.new(nil, position) unless expression[position] == ':'
 
     startPosition = position
@@ -63,14 +63,17 @@ module SExpressionParser
 
   def parseString(expression, position) : ParseResult
     startPosition = position
-    position = expression.index('"', position)
-    hasQuotes? = expression[position] == '"' && !position.nil?
-    return ParseResult.new(nil, startPosition) unless hasQuotes?
+    position = expression.index('"', position + 1)
+    if position.nil? || expression[position] != '"'
+      return ParseResult.new(nil, startPosition)
+    end
+
+    position |= 0
 
     ParseResult.new(expression[startPosition..position], position + 1)
   end
 
-  def parseNumber(expression, position) : Result
+  def parseNumber(expression, position : Int32) : ParseResult
     startPosition = position
     position = endOfSymbol(expression, position)
 
@@ -83,59 +86,54 @@ module SExpressionParser
     end
   end
 
-  def parseSexp(expression) : Tuple(Array(Result), Int32)
-    # return {nil, 0} unless expression.starts_with? "("
+  # Try all token parsers and bail early of one works.
+  def tryParsers(expression, position) : ParseResult
+    parsedToken = ParseResult.new(nil, position)
 
-    result = [] of Result
+    parsedToken = parseSexp(expression, position)
+    return parsedToken unless parsedToken.data.nil?
 
-    # expression = expression[1...expression.size]
-    position = 1
-    position = chompWhitespace expression, position
+    parsedToken = parseString(expression, position)
+    return parsedToken unless parsedToken.data.nil?
 
-    # if we have a close paren, we're done
-    until expression[position]?.nil? || expression[position] == ')'
-      position = chompWhitespace expression, position
-      puts "looping now at #{position}: #{expression}, which is #{expression[position]?}"
+    parsedToken = parseSymbol(expression, position)
+    return parsedToken unless parsedToken.data.nil?
 
-      # if we have an open paren, call ourselves recursively
-      if expression[position] == '('
-        puts "recursive call"
-        sexpResult = parseSexp(expression[position..-1])
-        result << sexpResult[0]
-        position = sexpResult[1]
-      else
-        # find the end of the current item, and grab it
-        endOfCurrentSymbol = endOfSymbol(expression, position) || expression.size - 1
-        item = expression[position...endOfCurrentSymbol]
-        position = endOfCurrentSymbol
-        puts "end is at #{endOfCurrentSymbol}"
+    parsedToken = parseBool(expression, position)
+    return parsedToken unless parsedToken.data.nil?
 
-        # bool = parseBool item
-        # return bool unless bool.nil?
-        # num = parseNumber item
-        # return num unless num.nil?
-        # sym = parseSymbol item
-        # return sym unless sym.nil?
-        # str = parseString item
-        # return str unless str.nil?
+    parsedToken = parseNumber(expression, position)
+    # return parsedToken unless parsedToken.data.nil?
 
-        # puts "making attempts"
+    return parsedToken
+  end
 
-        # this should be fine, because nothing should parse as more than 1 type
-        attempts = [] of Result
-        attempts << parseBool item
-        attempts << parseNumber item
-        attempts << parseSymbol item
-        attempts << parseString item
+  def parseSexp(expression, position)
+    unless expression[position] == '('
+      return ParseResult.new(nil, position)
+    end
 
-        result = result + attempts.compact
+    position = chompWhitespace(expression, position + 1)
 
-        # puts attempts
-        # result = result << attem
-        # position += 1
+    resultData = [] of Result
+
+    until expression[position].nil? || expression[position] == ')'
+      parsedToken = tryParsers(expression, position)
+
+      if parsedToken.data.nil?
+        break
+      end
+
+      resultData << parsedToken.data
+      position = parsedToken.nextPosition
+
+      while expression[position] == ' '
+        position += 1
       end
     end
-    {result, position + 1}
+    position += 1
+
+    ParseResult.new(resultData, position)
   end
 
   # OOP is retarded
@@ -171,5 +169,5 @@ module SExpressionParser
   # end
 end
 
-include SExpressionParser
-parseSexp("(1 (2 3))")
+# include SExpressionParser
+# parseSexp("(1 (2 3))")
