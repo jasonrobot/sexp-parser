@@ -256,13 +256,14 @@ const tryParseSexp = ( expression, position = 0 ) => {
     // we're going to keep using position
     position = position + 1;
     position = chompWhitespace( expression, position );
-    const endPosition = 1 + findNext( expression, position, ')' );
 
     // keep parsing from expression, updating position after every parse,
     // until the next non-whitespace token is close-paren
     let resultData = [];
 
     let parsedToken;
+    // this is ok for nested expressions, because if recursive tryParseSexp
+    // is successful, position skips over the nested close paren
     while ( expression[ position ] !== ')' ) {
         // console.log('starting token parse loop');
 
@@ -529,6 +530,11 @@ test( 'tryParseSexp', ( t ) => {
 
         st.deepEqual( tryParseSexp( '( ( ) )', 0 ).data, [[]] );
         st.deepEqual( tryParseSexp( '( ( ) )', 0 ).next, 7 );
+
+        st.deepEqual( tryParseSexp( '(() () ())', 0 ).data, [[], [], []],
+                      '(() () ())' );
+
+        st.deepEqual( tryParseSexp( '( ( 2 ) 3)', 0).data, [[2], 3] );
 
         st.end();
     } );
