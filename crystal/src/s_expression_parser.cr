@@ -27,8 +27,99 @@ module SExpressionParser
     end
   end
 
-  def endOfSymbol?(char : Char | Nil)
-    char.nil? || char == ' ' || char == ')'
+  class Parser
+    property expression : String,
+             position : Int32,
+             result : Result
+
+    def initialize(@expression)
+      @result = [] of Result
+    end
+
+    def endOfSymbol
+      @expression.index(/[\s)]/, @position) || @expression.size
+    end
+
+    def chompWhitespace!
+      until @expression[@position]?.nil? || @expression[@position] != ' '
+        @position += 1
+      end
+    end
+
+    def parseBool
+      if expression[position...position + 1].compare("T", true) == 0
+        @result << true
+        @position += 1
+      elsif expression[position...position + 3].compare("NIL", true) == 0
+        @result << false
+        @position += 3
+      end
+    end
+
+    def parseSymbol
+      # return ParseResult.new(nil, position) unless expression[position] == ':'
+
+      startPosition = @position
+      endPosition = endOfSymbol
+
+      @result << expression[startPosition...@position]
+      @position = endPosition
+    end
+
+    def parseString
+      startPosition = @position
+      endPosition = @expression.index('"', @position + 1) || @position
+      unless endPosition.nil? || @expression[endPosition] != '"'
+        @result << @expression[startPosition..@position]
+        @position = endPosition
+      end
+    end
+
+    def parseNumber
+      startPosition = @position
+      endPosition = endOfSymbol
+
+      numberResult = @expression[startPosition...endPosition].to_f64?
+
+      unless numberResult.nil?
+        @result << numberResult
+        @position = endPosition
+      end
+    end
+
+    def parseSexp(expression, position)
+      # this is dumb because we're gonna have to create a NEW PARSER INSTANCE to do our
+      # recursive descent if we wanna be OOP. Honestly, what's the benefit even.
+      return unless expression[position] == '('
+      @position += 1
+
+      chompWhitespace!
+
+      resultData = [] of Result
+
+      until @expression[@position].nil? || @expression[@position] == ')'
+        parseBool
+        parseString
+        parseSexp
+        parseSymbol
+        parseNumber
+
+        if parsedToken.data.nil?
+          break
+        end
+
+        resultData << parsedToken.data
+        position = parsedToken.nextPosition
+
+        while expression[position] == ' '
+          position += 1
+        end
+      end
+      position += 1
+
+      ParseResult.new(resultData, position)
+    end
+
   end
 
   def endOfSymbol(expression, position = 0) : Int32

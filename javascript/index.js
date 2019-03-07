@@ -25,8 +25,6 @@
  *               :positive T))
  */
 
-//let exports = module.export = {};
-
 // LISP-y syntax unification functions, because I'm weird
 
 /**
@@ -922,3 +920,21 @@ test( 'large round trip test', ( t ) => {
 
     t.end();
 } );
+if ( typeof module !== 'undefined' ) {
+    module.exports = {
+        chompWhitespace,
+        findEndOfSymbol,
+        tryParseBoolean,
+        tryParseString,
+        tryParseSymbol,
+        tryParseNumber,
+        tryParseSexp,
+        tryParseObject,
+        isParensBalanced,
+        isQuotesBalanced,
+        parse: parseExpression,
+        encodeAtom,
+        encodeArray,
+        encode
+    };
+}
