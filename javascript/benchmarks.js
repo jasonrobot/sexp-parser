@@ -277,23 +277,51 @@ const getTime = () => {
 
 const sexp = require('./index.js');
 
-const jsonEncodeStart = getTime();
-const encodedJson = JSON.stringify( largeDataPayload );
-const jsonEncodeEnd = getTime();
+let iterations = 1000;
 
-const jsonParseStart = getTime();
-const parsedJson = JSON.parse( encodedJson );
-const jsonParseEnd = getTime();
+let encodedJson = JSON.stringify( largeDataPayload );
 
-const sexpEncodeStart = getTime();
-const encodedSexp = sexp.encode( largeDataPayload );
-const sexpEncodeEnd = getTime();
+let jsonEncodeTime = 0;
+for ( let i = 0; i < iterations; i++ ) {
+    const jsonEncodeStart = getTime();
+    encodedJson = JSON.stringify( largeDataPayload );
+    jsonEncodeTime += ( getTime() - jsonEncodeStart ) / iterations;
+}
+// jsonEncodeTime /= iterations;
 
-const sexpParseStart = getTime();
-const parsedSexp = sexp.parse( encodedSexp );
-const sexpParseEnd = getTime();
+let parsedJson = JSON.parse( encodedJson );
 
-console.log( `JSON parse:  ${ jsonParseEnd - jsonParseStart}` );
-console.log( `JSON encode: ${ jsonEncodeEnd - jsonEncodeStart}` );
-console.log( `sexp parse:  ${ sexpParseEnd - sexpParseStart}` );
-console.log( `sexp encode: ${ sexpEncodeEnd - sexpEncodeStart}` );
+let jsonParseTime = 0;
+for ( let i = 0; i < iterations; i++ ) {
+    const jsonParseStart = getTime();
+    parsedJson = JSON.parse( encodedJson );
+    jsonParseTime += ( getTime() - jsonParseStart ) / iterations;
+}
+// jsonParseTime /= iterations;
+
+let encodedSexp = sexp.encode( largeDataPayload );
+
+let sexpEncodeTime = 0;
+for ( let i = 0; i < iterations; i++ ) {
+    const sexpEncodeStart = getTime();
+    encodedSexp = sexp.encode( largeDataPayload );
+    sexpEncodeTime += ( getTime() - sexpEncodeStart ) / iterations;
+}
+// sexpEncodeTime /= iterations;
+
+let parsedSexp = sexp.parse( encodedSexp );
+
+let sexpParseTime = 0;
+for ( let i = 0; i < iterations; i++ ) {
+    const sexpParseStart = getTime();
+    parsedSexp = sexp.parse( encodedSexp );
+    sexpParseTime += ( getTime() - sexpParseStart ) / iterations;
+}
+// sexpParseTime /= iterations;
+
+console.log( `JSON parse:  ${ jsonParseTime }` );
+console.log( `JSON encode: ${ jsonEncodeTime }` );
+console.log( `sexp parse:  ${ sexpParseTime }` );
+console.log( `sexp encode: ${ sexpEncodeTime }` );
+console.log( `parse is ${ sexpParseTime / jsonParseTime } slower` );
+console.log( `encode is ${ sexpEncodeTime / jsonEncodeTime } slower` );

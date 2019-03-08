@@ -25,52 +25,6 @@
  *               :positive T))
  */
 
-// LISP-y syntax unification functions, because I'm weird
-
-/**
- * lisp-inspired AND function
- */
-const and = ( ...params ) => {
-    return params.reduce( ( a, b ) => a && b, true );
-};
-
-/**
- * lisp-inspired OR function
- */
-const or = ( ...params ) => {
-    return params.reduce( ( a, b ) => a || b, false );
-};
-
-/**
- * lisp inspired NOT fucntion
- *
- * @param {Any} param param to negate, will be cast to boolean.
- * @return {boolean}
- */
-const not = ( param ) => !Boolean( param );
-
-/**
- * Return the first item of an array that passes a predicate.
- * Only evaluates items until one passes, then returns immediately.
- *
- * @param {[Any]} array An array of anything that PREDICATE can take as args.
- * @param {function} predicate Should return boolean, will be applied to items in ARRAY.
- */
-const first = ( array, predicate ) => {
-    for ( let index in array ) {
-        const item = array[index];
-        if ( predicate( item ) === true ) {
-            return item;
-        }
-    }
-    return undefined;
-};
-
-/********************************************************************/
-/// Helper functions finish!
-/// Parser code start!
-/********************************************************************/
-
 /**
  * Check if CHAR is the end of a symbol being evaluated.
  *
@@ -81,29 +35,6 @@ const isEndOfSymbol = ( char ) => {
     return ( char === undefined ||
              char === ' ' ||
              char === ')' );
-};
-
-/**
- * Find the position of the next char that passes a predicate.
- *
- * @param {string} string The string being checked over.
- * @param {int} position The starting position for scanning.
- * @param {function} fn The test applied to chars in the string. Optionally
- * can be a single character, which will be checked for equality.
- *
- * @return {int} the position of the next char that matched FN.
- */
-const findNext = ( string, position, fn ) => {
-    if ( ( typeof fn === 'string' &&
-           fn.length === 1 ) ) {
-        let charArgument = fn;
-        fn = (char) => char === charArgument;
-    }
-
-    while ( !( fn( string[ position ] ) ) ) {
-        position += 1;
-    }
-    return position;
 };
 
 const findEndOfSymbol = (string, position) => {
@@ -363,11 +294,11 @@ const parseExpression = ( expression ) => {
     //     throw 'Unbalanced parens in expression.';
     // }
 
-    if ( !( isQuotesBalanced( expression ) ) ) {
-        throw 'Unbalanced quotes in expression.';
-    }
+    // if ( !( isQuotesBalanced( expression ) ) ) {
+    //     throw 'Unbalanced quotes in expression.';
+    // }
 
-    let {data: sexpParseResult} = tryParseSexp( expression, 0 );
+    let sexpParseResult = tryParseSexp( expression, 0 ).data;
 
     if ( sexpParseResult === null ) {
         throw 'Parsing error in recursive descent.';
