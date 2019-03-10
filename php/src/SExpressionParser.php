@@ -3,18 +3,15 @@ declare(strict_types=1);
 
 final class ParserResult
 {
-    function __construct(string $data, int $next)
+    function __construct($data, int $next)
     {
         $this->data = $data;
         $this->next = $next;
-        $this->success = true;
     }
 
     function none(int $next)
     {
-        $temp = new self('', $next);
-        $temp->success = false;
-        return $temp;
+        return new self(null, $next);
     }
 }
 
@@ -24,13 +21,15 @@ final class Parser
     /**
      * Check if $char is the end of a symbol being evaluated
      */
-    function isEndOfSymbol(string $char, int $position) : bool
+    function isEndOfSymbol(string $expression, int $position) : bool
     {
-        if ($position >= strlen($char))
+
+        if ($position >= strlen($expression))
         {
             return true;
         }
 
+        $char = $expression[$position];
         return (
             $char == ' ' ||
             $char == ')'
@@ -67,17 +66,53 @@ final class Parser
 
     function tryParseString(string &$expression, int $position) : ParserResult
     {
-        return ParserResult::none($position);
+        if( $expression[$position] != '"' )
+        {
+            return ParserResult::none($position);
+        }
+        $startPosition = $position + 1;
+        //skip the first quote
+        $position += 1;
+
+        $position = strpos($expression, '"', $position);
+
+        $length = $position - $startPosition;
+        return new ParserResult(
+            substr($expression, $startPosition, $length),
+            //skip the last quote
+            $position + 1
+        );
     }
 
     function tryParseSymbol(string &$expression, int $position) : ParserResult
     {
-        return ParserResult::none($position);
+        if ( $expression[$position] != ':' )
+        {
+            return ParserResult::none($position);
+        }
+
+        $startPosition = $position;
+
+        $position = self::findEndOfSymbol( $expression, $position );
+
+        $length = $position - $startPosition;
+        return new ParserResult(
+            substr( $expression, $startPosition, $length ),
+            $position
+        );
     }
 
     function tryParseNumber(string &$expression, int $position) : ParserResult
     {
-        return ParserResult::none($position);
+        $startPosition = $position;
+        $position = self::findEndOfSymbol($expression, $position);
+        $length = $position - $startPosition;
+        $numberString = substr($expression, $startPosition, $length);
+        if( !is_numeric($numberString) )
+        {
+            return ParserResult::none($position);
+        }
+        return new ParserResult( floatval($numberString), $position );
     }
 
 }
