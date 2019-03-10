@@ -81,4 +81,19 @@ final class SexpParserTest extends TestCase
         $expr = '-0.5';
         $this->assertEquals( -0.5, Parser::tryParseNumber($expr, 0)->data);
     }
+
+    function testTryPraseSexp() : void
+    {
+        $expr = '( 1 2 3)';
+        $this->assertEquals( [1, 2, 3], Parser::tryParseSexp($expr, 0)->data);
+
+        $expr = '()';
+        $this->assertEquals( [], Parser::tryParseSexp($expr, 0)->data);
+
+        $expr = '(1.5 "foobar" NIL)';
+        $this->assertEquals( [1.5, 'foobar', false], Parser::tryParseSexp($expr, 0)->data);
+
+        $expr = '(1 (2 3) 4)';
+        $this->assertEquals( [1, [2, 3], 4], Parser::tryParseSexp($expr, 0)->data);
+    }
 }

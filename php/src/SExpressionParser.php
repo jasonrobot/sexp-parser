@@ -115,4 +115,50 @@ final class Parser
         return new ParserResult( floatval($numberString), $position );
     }
 
+    function tryAllParsers(&$expression, $position)
+    {
+        $maybeNumber = self::tryParseNumber($expression, $position);
+        if ($maybeNumber->data != null) { return $maybeNumber; }
+
+        $maybeBool = self::tryParseBool($expression, $position);
+        if ($maybeBool->data != null) { return $maybeBool; }
+
+        $maybeSymbol = self::tryParseSymbol($expression, $position);
+        if ($maybeSymbol->data != null) { return $maybeSymbol; }
+
+        $maybeString = self::tryParseString($expression, $position);
+        if ($maybeString->data != null) { return $maybeString; }
+
+        $maybeSexp = self::tryParseSexp($expression, $position);
+        if ($maybeSexp->data != null) { return $maybeSexp; }
+
+        // if nothing can be parsed, just assume the whole thing is fucked
+        return null;
+    }
+
+    function tryParseSexp(string &$expression, int $position) : ParserResult
+    {
+        if($expression[$position] != '(')
+        {
+            return ParserResult::none($position);
+        }
+
+        $position = $position + 1;
+        $position = self::chompWhitespace($expression, $position);
+
+        $resultData = [];
+        while ( $expression[$position] != ')')
+        {
+            $parsedToken = self::tryAllParsers($expression, $position);
+            if($parsedToken == null) { break; }
+
+            $resultData[] = $parsedToken->data;
+            $position = $parsedToken->next;
+            $position = self::chompWhitespace($expression, $position);
+        }
+        //move over closing paren
+        $position += 1;
+        return new ParserResult($resultData, $position);
+    }
+
 }
