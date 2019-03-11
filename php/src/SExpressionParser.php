@@ -56,10 +56,20 @@ final class Parser
 
     function tryParseBool(string &$expression, int $position) : ParserResult
     {
-        if ( strtoupper($expression[$position]) == 'T' &&
+        $endpos = $position + 3;
+        echo "parse bool in $expression from $position to $endpos\n";
+        echo substr($expression, $position, 3);
+        echo "\n";
+        if ( strtoupper($expression[$position]) === 'T' &&
              self::isEndOfSymbol($expression, $position + 1) )
         {
             return new ParserResult(true, $position + 1);
+        }
+        if ( (strlen($expression) >= $position + 3) &&
+             (strtoupper(substr($expression, $position, 3)) === 'NIL') &&
+             (self::isEndOfSymbol($expression, $position + 3) ) )
+        {
+            return new ParserResult(false, $position + 3);
         }
         return ParserResult::none($position);
     }
@@ -118,19 +128,19 @@ final class Parser
     function tryAllParsers(&$expression, $position)
     {
         $maybeNumber = self::tryParseNumber($expression, $position);
-        if ($maybeNumber->data != null) { return $maybeNumber; }
+        if ($maybeNumber->data !== null) { return $maybeNumber; }
 
         $maybeBool = self::tryParseBool($expression, $position);
-        if ($maybeBool->data != null) { return $maybeBool; }
+        if ($maybeBool->data !== null) { return $maybeBool; }
 
         $maybeSymbol = self::tryParseSymbol($expression, $position);
-        if ($maybeSymbol->data != null) { return $maybeSymbol; }
+        if ($maybeSymbol->data !== null) { return $maybeSymbol; }
 
         $maybeString = self::tryParseString($expression, $position);
-        if ($maybeString->data != null) { return $maybeString; }
+        if ($maybeString->data !== null) { return $maybeString; }
 
         $maybeSexp = self::tryParseSexp($expression, $position);
-        if ($maybeSexp->data != null) { return $maybeSexp; }
+        if ($maybeSexp->data !== null) { return $maybeSexp; }
 
         // if nothing can be parsed, just assume the whole thing is fucked
         return null;
@@ -150,7 +160,7 @@ final class Parser
         while ( $expression[$position] != ')')
         {
             $parsedToken = self::tryAllParsers($expression, $position);
-            if($parsedToken == null) { break; }
+            if($parsedToken === null) { break; }
 
             $resultData[] = $parsedToken->data;
             $position = $parsedToken->next;
