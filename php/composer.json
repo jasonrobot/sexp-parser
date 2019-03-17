@@ -1,7 +1,7 @@
 {
     "autoload": {
-        "classmap": [
-            "src/"
+        "files": [
+            "src/SExpressionParser.php"
         ]
     },
     "require-dev": {

@@ -1,22 +1,22 @@
 <?php
 declare(strict_types=1);
 
-final class ParserResult
+namespace Parser
 {
-    function __construct($data, int $next)
-    {
-        $this->data = $data;
-        $this->next = $next;
-    }
 
-    function none(int $next)
+    final class ParserResult
     {
-        return new self(null, $next);
-    }
-}
+        function __construct($data, int $next)
+        {
+            $this->data = $data;
+            $this->next = $next;
+        }
 
-final class Parser
-{
+        function none(int $next)
+        {
+            return new self(null, $next);
+        }
+    }
 
     /**
      * Check if $char is the end of a symbol being evaluated
@@ -38,7 +38,7 @@ final class Parser
 
     function findEndOfSymbol(string &$expression, int $position) : int
     {
-        while ( !self::isEndOfSymbol($expression, $position) )
+        while ( !isEndOfSymbol($expression, $position) )
         {
             $position += 1;
         }
@@ -61,13 +61,13 @@ final class Parser
         echo substr($expression, $position, 3);
         echo "\n";
         if ( strtoupper($expression[$position]) === 'T' &&
-             self::isEndOfSymbol($expression, $position + 1) )
+             isEndOfSymbol($expression, $position + 1) )
         {
             return new ParserResult(true, $position + 1);
         }
         if ( (strlen($expression) >= $position + 3) &&
              (strtoupper(substr($expression, $position, 3)) === 'NIL') &&
-             (self::isEndOfSymbol($expression, $position + 3) ) )
+             (isEndOfSymbol($expression, $position + 3) ) )
         {
             return new ParserResult(false, $position + 3);
         }
@@ -103,7 +103,7 @@ final class Parser
 
         $startPosition = $position;
 
-        $position = self::findEndOfSymbol( $expression, $position );
+        $position = findEndOfSymbol( $expression, $position );
 
         $length = $position - $startPosition;
         return new ParserResult(
@@ -115,7 +115,7 @@ final class Parser
     function tryParseNumber(string &$expression, int $position) : ParserResult
     {
         $startPosition = $position;
-        $position = self::findEndOfSymbol($expression, $position);
+        $position = findEndOfSymbol($expression, $position);
         $length = $position - $startPosition;
         $numberString = substr($expression, $startPosition, $length);
         if( !is_numeric($numberString) )
@@ -127,19 +127,19 @@ final class Parser
 
     function tryAllParsers(&$expression, $position)
     {
-        $maybeNumber = self::tryParseNumber($expression, $position);
+        $maybeNumber = tryParseNumber($expression, $position);
         if ($maybeNumber->data !== null) { return $maybeNumber; }
 
-        $maybeBool = self::tryParseBool($expression, $position);
+        $maybeBool = tryParseBool($expression, $position);
         if ($maybeBool->data !== null) { return $maybeBool; }
 
-        $maybeSymbol = self::tryParseSymbol($expression, $position);
+        $maybeSymbol = tryParseSymbol($expression, $position);
         if ($maybeSymbol->data !== null) { return $maybeSymbol; }
 
-        $maybeString = self::tryParseString($expression, $position);
+        $maybeString = tryParseString($expression, $position);
         if ($maybeString->data !== null) { return $maybeString; }
 
-        $maybeSexp = self::tryParseSexp($expression, $position);
+        $maybeSexp = tryParseSexp($expression, $position);
         if ($maybeSexp->data !== null) { return $maybeSexp; }
 
         // if nothing can be parsed, just assume the whole thing is fucked
@@ -154,17 +154,17 @@ final class Parser
         }
 
         $position = $position + 1;
-        $position = self::chompWhitespace($expression, $position);
+        $position = chompWhitespace($expression, $position);
 
         $resultData = [];
         while ( $expression[$position] != ')')
         {
-            $parsedToken = self::tryAllParsers($expression, $position);
+            $parsedToken = tryAllParsers($expression, $position);
             if($parsedToken === null) { break; }
 
             $resultData[] = $parsedToken->data;
             $position = $parsedToken->next;
-            $position = self::chompWhitespace($expression, $position);
+            $position = chompWhitespace($expression, $position);
         }
         //move over closing paren
         $position += 1;
