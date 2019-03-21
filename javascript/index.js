@@ -25,52 +25,6 @@
  *               :positive T))
  */
 
-// LISP-y syntax unification functions, because I'm weird
-
-/**
- * lisp-inspired AND function
- */
-const and = ( ...params ) => {
-    return params.reduce( ( a, b ) => a && b, true );
-};
-
-/**
- * lisp-inspired OR function
- */
-const or = ( ...params ) => {
-    return params.reduce( ( a, b ) => a || b, false );
-};
-
-/**
- * lisp inspired NOT fucntion
- *
- * @param {Any} param param to negate, will be cast to boolean.
- * @return {boolean}
- */
-const not = ( param ) => !Boolean( param );
-
-/**
- * Return the first item of an array that passes a predicate.
- * Only evaluates items until one passes, then returns immediately.
- *
- * @param {[Any]} array An array of anything that PREDICATE can take as args.
- * @param {function} predicate Should return boolean, will be applied to items in ARRAY.
- */
-const first = ( array, predicate ) => {
-    for ( let index in array ) {
-        const item = array[index];
-        if ( predicate( item ) === true ) {
-            return item;
-        }
-    }
-    return undefined;
-};
-
-/********************************************************************/
-/// Helper functions finish!
-/// Parser code start!
-/********************************************************************/
-
 /**
  * Check if CHAR is the end of a symbol being evaluated.
  *
@@ -78,32 +32,21 @@ const first = ( array, predicate ) => {
  * @return {boolean}
  */
 const isEndOfSymbol = ( char ) => {
-    return or( char === undefined,
-               char === ' ',
-               char === ')' );
+    return ( char === undefined ||
+             char === ' ' ||
+             char === ')' );
 };
 
-/**
- * Find the position of the next char that passes a predicate.
- *
- * @param {string} string The string being checked over.
- * @param {int} position The starting position for scanning.
- * @param {function} fn The test applied to chars in the string. Optionally
- * can be a single character, which will be checked for equality.
- *
- * @return {int} the position of the next char that matched FN.
- */
-const findNext = ( string, position, fn ) => {
-    if ( and ( typeof fn === 'string',
-               fn.length === 1 ) ) {
-        let charArgument = fn;
-        fn = (char) => char === charArgument;
-    }
+const findEndOfSymbol = (string, position) => {
+    const nextSpace = string.indexOf( ' ', position );
+    const nextParen = string.indexOf( ')', position );
 
-    while ( not( fn( string[ position ] ) ) ) {
-        position += 1;
+    if ( nextSpace === -1 && nextParen === -1 ) {
+        return string.length;
     }
-    return position;
+    if ( nextSpace === -1 ) { return nextParen; }
+    if ( nextParen === -1 ) { return nextSpace; }
+    return nextSpace < nextParen ? nextSpace : nextParen;
 };
 
 /**
@@ -155,7 +98,7 @@ const tryParseString = ( expression, position ) => {
     //skip the first quote
     position += 1;
 
-    position = findNext( expression, position, c => c === '"' );
+    position = expression.indexOf( '"', position );
 
     return ParserResult(
         expression.substring( startPosition + 1, position ),
@@ -175,7 +118,7 @@ const tryParseSymbol = ( expression, position ) => {
     }
     const startPosition = position;
 
-    position = findNext( expression, position, isEndOfSymbol );
+    position = findEndOfSymbol( expression, position );
 
     return ParserResult(
         expression.substring( startPosition, position ),
@@ -189,8 +132,12 @@ const tryParseSymbol = ( expression, position ) => {
 const tryParseNumber = ( expression, position ) => {
     // /^[\d.-]
     const startPosition = position;
-    position = findNext( expression, position, isEndOfSymbol );
+
+    position = findEndOfSymbol( expression, position );
     const value = Number( expression.substring( startPosition, position ) );
+    if ( Number.isNaN( value ) ) {
+        return ParserResult( null, position );
+    }
     return ParserResult( value, position );
 };
 
@@ -202,31 +149,16 @@ const tryParseObject = ( array ) => {
         return array;
     }
 
-    // grab what will be the object's keys
-    const keys = [];
-    for ( let index = 0; index < array.length; index += 2 ) {
-        keys.push( array[ index ] );
-    }
-
-    // all need to be strings starting with a colon
-    if ( not( keys.every( key => typeof key == 'string' && key.startsWith( ':' ) ) ) ) {
-        return array;
-    }
-
-    // get the values for the keys
-    const values = [];
-    for ( let index = 1; index < array.length; index += 2 ) {
-        values.push( array[ index ] );
-    }
-
     const result = {};
 
-    // merge them together
-    for ( let index = 0; index < keys.length; index += 1 ) {
-        let keyName = keys[ index ].substring( 1 );
-        let value = values[ index ];
+    for ( let index = 0; index < array.length; index += 2 ) {
+        const key = array[ index ];
+        if ( typeof key !== 'string' || key[0] !== ':' ) {
+            return array;
+        }
 
-        result[ keyName ] = value;
+        const value = array[ index + 1 ];
+        result[ key.substring( 1 ) ] = value;
     }
 
     return result;
@@ -267,10 +199,27 @@ const tryParseSexp = ( expression, position = 0 ) => {
 
         // take the result of the first successful parser
         // RECURSION HAPPENS HERE!!!
-        parsedToken = first( parsers, parser => {
-            return parser( expression, position ).data !== null;
-        } );
-        parsedToken = parsedToken( expression, position );
+
+        const tryParsers = () => {
+            const maybeNumber = tryParseNumber( expression, position );
+            if ( maybeNumber.data !== null ) { return maybeNumber; }
+
+            const maybeBool = tryParseBoolean( expression, position );
+            if ( maybeBool.data !== null ) { return maybeBool; }
+
+            const maybeSymbol = tryParseSymbol( expression, position );
+            if ( maybeSymbol.data !== null ) { return maybeSymbol; }
+
+            const maybeString = tryParseString( expression, position );
+            if ( maybeString.data !== null ) { return maybeString; }
+
+            const maybeSexp = tryParseSexp( expression, position );
+            if ( maybeSexp.data !== null ) { return maybeSexp; }
+
+            return undefined;
+        };
+
+        parsedToken = tryParsers();
         // if nothing parses the token, we're at the end. This is an error
         // and should never happen if the expression was balanced
         if ( parsedToken === undefined ) {
@@ -323,14 +272,8 @@ const isParensBalanced = ( expression ) => {
  * Check if there are an even number of quotes in a string.
  */
 const isQuotesBalanced = ( expression ) => {
-    let quoteCount = 0;
-    for ( let position in expression ) {
-        let char = expression[position];
-        if ( char === '"' ) {
-            quoteCount += 1;
-        }
-    }
-    return ( quoteCount % 2 ) === 0;
+    const matches = expression.match( /"/g );
+    return matches === null || matches.length % 2 === 0;
 };
 
 /**
@@ -347,15 +290,15 @@ const parseExpression = ( expression ) => {
 
     expression = expression.trim();
 
-    if ( not( isParensBalanced( expression ) ) ) {
-        throw 'Unbalanced parens in expression.';
-    }
+    // if ( not( isParensBalanced( expression ) ) ) {
+    //     throw 'Unbalanced parens in expression.';
+    // }
 
-    if ( not( isQuotesBalanced( expression ) ) ) {
-        throw 'Unbalanced quotes in expression.';
-    }
+    // if ( !( isQuotesBalanced( expression ) ) ) {
+    //     throw 'Unbalanced quotes in expression.';
+    // }
 
-    let {data: sexpParseResult} = tryParseSexp( expression, 0 );
+    let sexpParseResult = tryParseSexp( expression, 0 ).data;
 
     if ( sexpParseResult === null ) {
         throw 'Parsing error in recursive descent.';
@@ -371,7 +314,6 @@ const parseExpression = ( expression ) => {
 
 
 const encodeAtom = ( atom ) => {
-    // console.log( `encoding atom: ${atom} :: ${typeof atom}` );
     if ( typeof atom === 'string' ) {
         return '"' + atom + '"';
     }
@@ -385,11 +327,12 @@ const encodeAtom = ( atom ) => {
 };
 
 const encodeArray = ( array ) => {
-    // console.log( `encoding array: ${array}` );
-    const contents = array.map( (item) => {
-        return encode(item);
-    } );
-    return `(${contents.join(' ')})`;
+    let contents = '';
+    for ( let i = 0; i < array.length; i++ ) {
+        contents += encode( array[i] ) + ' ';
+    }
+    contents = contents.trim();
+    return '(' + contents  + ')';
 };
 
 /**
@@ -403,22 +346,20 @@ const encode = ( object ) => {
         return encodeAtom( object );
     }
 
-    // We can be fairly certain it's an object now.
-    // {a: 1, b: 2} => [['a', 1], ['b', 2]] => [':a 1', ':b 2'] => ':a 1 :b 2'
-    //           entries                   map                join(' ')
-    const contents = Object.entries( object ).map( ( [key, value] ) => {
-        return [
-            ':' + key,
-            encode( value )
-        ].join( ' ' );
-    } );
+    let contents = '';
+    for ( let key in object ) {
+        const value = encode( object[ key ] );
 
-    return `(${contents.join( ' ' )})`;
+        contents += ':' + key + ' ' + value + ' ';
+    }
+    contents = contents.trim();
+    return '(' + contents + ')';
 };
 
 if ( typeof module !== 'undefined' ) {
     module.exports = {
         chompWhitespace,
+        findEndOfSymbol,
         tryParseBoolean,
         tryParseString,
         tryParseSymbol,
