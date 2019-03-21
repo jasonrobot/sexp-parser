@@ -57,9 +57,6 @@ namespace Parser
     function tryParseBool(string &$expression, int $position) : ParserResult
     {
         $endpos = $position + 3;
-        echo "parse bool in $expression from $position to $endpos\n";
-        echo substr($expression, $position, 3);
-        echo "\n";
         if ( strtoupper($expression[$position]) === 'T' &&
              isEndOfSymbol($expression, $position + 1) )
         {
@@ -169,6 +166,111 @@ namespace Parser
         //move over closing paren
         $position += 1;
         return new ParserResult($resultData, $position);
+    }
+
+    function isParensBalanced(string &$expression) : bool
+    {
+        $netBalance = 0;
+        foreach (str_split($expression) as $char)
+        {
+            if ($char === '(')
+            {
+                $netBalance += 1;
+            }
+            if ($char === ')')
+            {
+                $netBalance -= 1;
+            }
+            if ($netBalance < 0)
+            {
+                return false;
+            }
+        }
+
+        return $netBalance === 0;
+    }
+
+    function isQuotesBalanced(string &$expression) : bool
+    {
+        // $charCounts = count_chars($expression);
+        // return $charCounts['"'] % 2 === 0;
+
+        return substr_count($expression, '"') % 2 === 0;
+
+    }
+
+    function encodeAtom(&$data) : string
+    {
+        $dataType = gettype($data);
+
+        switch ($dataType)
+        {
+        case 'string':
+            return "\"$data\"";
+            break;
+
+        case 'boolean':
+            if ( $data === true )
+            {
+                return "T";
+            }
+            else
+            {
+                return "NIL";
+            }
+            break;
+        default:
+            return (string)$data;
+        }
+    }
+
+
+    function encodeArray(&$data) : string
+    {
+        $contents = '';
+
+        foreach($data as $element)
+        {
+            $encodedElement = encode($element);
+            $contents = "$contents $encodedElement";
+        }
+        $contents = trim($contents);
+        return "($contents)";
+    }
+
+
+    // https://stackoverflow.com/questions/173400/how-to-check-if-php-array-is-associative-or-sequential
+    function is_assoc(array $arr)
+    {
+        if (array() === $arr) return false;
+        return array_keys($arr) !== range(0, count($arr) - 1);
+    }
+
+    // test encoding all data
+    function encode(&$data) : string
+    {
+        if (is_array($data))
+        {
+            if (is_assoc($data))
+            {
+                $contents = "";
+                foreach($data as $key => $value)
+                {
+                    $encodedValue = encode($value);
+                    $contents = "$contents :$key $encodedValue";
+                }
+                $contents = trim($contents);
+                return "($contents)";
+            }
+            else
+            {
+                return encodeArray($data);
+            }
+        }
+        else
+        {
+            return encodeAtom($data);
+        }
     }
 
 }
