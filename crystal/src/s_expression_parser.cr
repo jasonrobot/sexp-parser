@@ -34,6 +34,7 @@ module SExpressionParser
 
     def initialize(@expression)
       @result = [] of Result
+      @position = 0
     end
 
     def endOfSymbol
@@ -226,39 +227,4 @@ module SExpressionParser
 
     ParseResult.new(resultData, position)
   end
-
-  # OOP is retarded
-
-  # class Parser
-  #   alias ParseResult = Int32 | String | Bool | Array(ParseResult) | Hash(String, ParseResult) | Nil
-
-  #   getter position : Int32,
-  #          expression : String,
-  #          lastResult : ParseResult
-
-  #   def initialize( @expression = "", @position = 0 )
-  #   end
-
-  #   def endOfSymbol?
-  #     char = @expression[@position]?
-
-  #     ( char.nil? || char == ' ' || char == ')' )
-  #   end
-
-  #   # findNext -> String#index (search : Char)
-
-  #   def chompWhitespace( expression, position )
-  #     while @expression[@position]?.nil? == false && @expression[@position] == ' '
-  #       @position += 1
-  #     end
-  #   end
-
-  #   def parseBool?
-
-  #   end
-
-  # end
 end
-
-# include SExpressionParser
-# parseSexp("(1 (2 3))")

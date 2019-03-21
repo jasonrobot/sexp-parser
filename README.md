@@ -49,5 +49,6 @@ Plus, I love playing with bunches of programming languages, and this gives me a 
 ## Supported Languages:
 - Javascript
 - Crystal
+- PHP
 - (Lisp is missing? Dude, wtf?)
 - more to come!
