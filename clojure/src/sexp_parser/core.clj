@@ -71,33 +71,87 @@
     (swap! position inc))
   @position)
 
-(defn parse-sexp? [expression position]
-  (if (not (= (get expression position) \())
-    (parse-result nil position)
-    (let [start-position (chomp-whitespace (inc position))
-          current-position (atom start-position)]
-      (while (not (= (get expression @current-position) \)))
-        (let [parsed-token (or (parse-number? expression @current-position)
-                               (parse-bool? expression @current-position)
-                               (parse-symbol? expression @current-position)
-                               (parse-string? expression @current-position)
-                               (parse-sexp? expression @current-position))]
-          ;; (swap! current-position (:next parsed-token))
-          ;; (append result (:data parsed-token)))))))
-          )))))
+;; (defn parse-sexp? [expression position]
+;;   (if (not (= (get expression position) \())
+;;     (parse-result nil position)
+;;     (let [start-position (chomp-whitespace expression (inc position))
+;;           current-position (atom start-position)]
+;;       (while (not (= (get expression @current-position) \)))
+;;         (let [parsed-token (or (parse-number? expression @current-position)
+;;                                (parse-bool? expression @current-position)
+;;                                (parse-symbol? expression @current-position)
+;;                                (parse-string? expression @current-position))]
+;;                                ;; (parse-sexp? expression (+ 1 @current-position)))]
+;;           ;; (swap! current-position (:next parsed-token))
+;;           ;; (append result (:data parsed-token)))))))
+;;           )))))
+
+(defn tokenize [expression-string]
+  (remove #(= "" %1)
+        (-> expression-string
+            (str/replace  #"([\(\)])" " $1 ")
+            (str/split #" "))))
+
+;; (filter #(not (= "" %1))
+;;         (-> "(1 2(:a 69)())"
+;;             (str/replace  #"([\(\)])" " $1 ")
+;;             (str/split #" ")))
+
+;; (defn parse-reduce [acc rest]
+;;   (let [token (next rest)]
+;;     (into acc
+;;           (cond
+;;             (= "(" token)
+;;             (parse-reduce [] (take 1 rest))
+;;             (= ")" token)
+;;             :else
+;;             [(parse-atom token)])))
+
+;; (reduce parse-reduce [] tokens)
+
+;;   )
+
+;;; Very yikes.
+;; parse-sexp :: Vec -> Seq(string) -> Vec(Vec(Tokens) Seq(string))
+(defn parse-reduce-sexp [init-acc sexp]
+  (loop [acc init-acc
+         tokens sexp]
+    (let [cur-token (first tokens)]
+      (cond
+        (= cur-token "(")
+        ;; (apply recur (into acc (parse-sexp (rest tokens))))
+        (let [[next-acc next-tokens] (parse-sexp [] (rest tokens))]
+          (recur next-acc next-tokens))
+        (or (= cur-token ")")
+            (empty? tokens))
+        [acc (rest tokens)]
+        :else
+        (recur (into acc [(parse-token cur-token)]) (rest tokens))))))
+
+(defn parse-sexp? []
+
+(defn balance-reducer [acc next]
+  (if (= acc false)
+    false
+    (cond
+      (= next \()
+      (inc acc)
+      (= next \))
+      (do
+        (dec acc) ;Decrement acc, then check if we have too many closes.
+        (if (> 0 acc)
+          false
+          acc))
+      :else ;it's a non-paren, return acc so we keep going
+      acc)))
 
 (defn parens-balanced? [expression]
-  (reduce (fn [acc next]
-            (cond
-              (= next \()
-              (inc acc)
-              (= next \))
-              (dec acc)))
-          0
-          expression))
+  (= 0 (reduce balance-reducer 0 expression)))
 
 (defn quotes-balanced? [expression]
-  (= 0 (mod 2 (count (re-seq #"\"" expression)))))
+  (let [quote-count (count (re-seq #"\"" expression))]
+    (or (== 0 quote-count)
+        (= 0 (mod 2 quote-count)))))
 
 (defn encode-atom [data]
   (cond
@@ -108,6 +162,22 @@
     :else
     (pr-str data)))
 
-(defn encode-array [data])
+(declare encode)
+(defn encode-array [data]
+  (str "("
+       (str/join " " (map encode data))
+       ")"))
 
-(defn encode [data])
+(defn encode-map [data]
+  (-> (pr-str data)
+      (str/replace #"\{" "(")
+      (str/replace #"\}" ")")))
+
+(defn encode [data]
+  (cond
+    (or (vector? data) (list? data))
+    (encode-array data)
+    (map? data)
+    (encode-map data)
+    :else
+    (encode-atom data)))

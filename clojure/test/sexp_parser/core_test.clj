@@ -97,6 +97,7 @@
   (is (= (parens-balanced? "(()()(()))") true))
   (is (= (parens-balanced? "(works (with ( stuff )in )between )") true))
   (is (= (parens-balanced? ")(") false))
+  (is (= (parens-balanced? "(())))(((())") false))
   (is (= (parens-balanced? "(") false))
   (is (= (parens-balanced? ")") false))
   (is (= (parens-balanced? "())") false))
