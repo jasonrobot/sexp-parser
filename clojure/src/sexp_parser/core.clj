@@ -17,7 +17,7 @@
 (defn make-maps [item]
   "Map over elements of the array, turn them in to hash maps if possible."
   (if (coll? item)
-    (map-or-self (map map-or-self item))
+    (map-or-self (map make-maps item))
     item))
 
 (defn parse [data]
@@ -39,12 +39,10 @@
        ")"))
 
 (defn encode-map [data]
-  (-> (pr-str data)
-      (str/replace #"\{" "(")
-      (str/replace #"\}" ")")))
+  (pr-str data))
 
 (defn encode [data]
-  (str/replace
+  (->
    (cond
      (or (vector? data) (list? data))
      (encode-array data)
@@ -52,5 +50,8 @@
      (encode-map data)
      :else
      (encode-atom data))
-   #","
-   ""))
+   (str/replace #"," "")
+   (str/replace #"[\[\{]" "(")
+   (str/replace #"[\]\}]" ")")
+   (str/replace #"false" "NIL")
+   (str/replace #"true" "T")))
