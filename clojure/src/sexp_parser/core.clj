@@ -23,46 +23,42 @@
           next-space
           next-paren)))))
 
-(defn parse-bool? [expression position]
+(defn parse-bool? [expression]
   (cond
-    (and (= (get expression position) \T)
-         (end-of-symbol? expression (inc position)))
-    (parse-result true (inc position))
-    (= (subs expression position (+ 3 position)) "NIL")
-    (parse-result false (+ 3 position))
+    (= expression "T")
+    true
+    (= expression "NIL")
+    false
     :else
-    (parse-result nil position)))
+    nil))
 
-(defn parse-string? [expression position]
-  (if (not (= (get expression position) \"))
-    (parse-result nil position)
-    (let [start-position (inc position)
-          end-position (str/index-of expression \" (inc position))]
-      (parse-result (subs expression start-position end-position)
-                    (inc end-position)))))
+(defn parse-string? [expression]
+  (if (not (= (get expression 0) \"))
+    nil
+    (-> (str/replace expression #"\"" ""))))
 
 ;; FIXME its keyword here, not symbol
-(defn parse-symbol? [expression position]
-  (if (not (= (get expression position) \:))
-    (parse-result nil position)
-    (let [end-position (find-end-of-symbol expression position)]
-      (parse-result (keyword (subs expression (inc position) end-position))
-                    end-position))))
+(defn parse-symbol? [expression]
+  (if (not (= (get expression 0) \:))
+    nil
+    (keyword (subs expression 1))))
 
-(defn -parse-double [s]
-  (Double/parseDouble (re-find #"-?[\d\.]+" s)))
+(defn parse-double [s]
+  (try
+    (Double/parseDouble (re-find #"-?[\d\.]+" s))
+    (catch Exception e nil)))
 
-(defn parse-number? [expression position]
-  (let [end-position (find-end-of-symbol expression position)
-        value (-parse-double (subs expression position end-position))]
+(defn parse-number? [expression]
+  (let [value (parse-double expression)]
     (if (not (number? value))
-      (parse-result nil position)
-      (parse-result value end-position))))
+      nil
+      value)))
 
 ;; Obviously there are no JS objects in clojure, so its a Map.
-(defn parse-object? [expression position])
+(defn parse-object? [expression])
 
 ;; get the position of the next non-whitespace char
+;; FIXME dont use an atom, dingus
 (defn chomp-whitespace [expression start-position]
   (def position (atom start-position))
   (while (let [current-char (get expression @position)]
@@ -71,45 +67,36 @@
     (swap! position inc))
   @position)
 
-;; (defn parse-sexp? [expression position]
-;;   (if (not (= (get expression position) \())
-;;     (parse-result nil position)
-;;     (let [start-position (chomp-whitespace expression (inc position))
-;;           current-position (atom start-position)]
-;;       (while (not (= (get expression @current-position) \)))
-;;         (let [parsed-token (or (parse-number? expression @current-position)
-;;                                (parse-bool? expression @current-position)
-;;                                (parse-symbol? expression @current-position)
-;;                                (parse-string? expression @current-position))]
-;;                                ;; (parse-sexp? expression (+ 1 @current-position)))]
-;;           ;; (swap! current-position (:next parsed-token))
-;;           ;; (append result (:data parsed-token)))))))
-;;           )))))
+(defn parse-token [token]
+  (or (parse-number? token)
+      (parse-bool? token)
+      (parse-symbol? token)
+      (parse-string? token)))
 
+;;; FIXME this doesn't work for strings!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 (defn tokenize [expression-string]
-  (remove #(= "" %1)
-        (-> expression-string
-            (str/replace  #"([\(\)])" " $1 ")
-            (str/split #" "))))
+  ;; (remove #(= "" %1)
+  ;;       (-> expression-string
+  ;;           (str/replace  #"([\(\)])" " $1 ")
+  ;;           (str/split #" "))))
+  ;; Good coders reimplement. Great coders steal. Galaxy brain coders use libraries.
+  (-> expression-string
+      (edn/read-string)
 
-;; (filter #(not (= "" %1))
-;;         (-> "(1 2(:a 69)())"
-;;             (str/replace  #"([\(\)])" " $1 ")
-;;             (str/split #" ")))
 
-;; (defn parse-reduce [acc rest]
-;;   (let [token (next rest)]
-;;     (into acc
-;;           (cond
-;;             (= "(" token)
-;;             (parse-reduce [] (take 1 rest))
-;;             (= ")" token)
-;;             :else
-;;             [(parse-atom token)])))
+(def tok2 [expr]
+  (loop [toks []
+         rst expr]
+    (let [cur (first rst)]
+      (cond
+        (= "\"" cur)
+        ;; From here till next non-escaped quote is a token.
+        (do
+          (let [next-quot (
 
-;; (reduce parse-reduce [] tokens)
 
-;;   )
+(defn rejoin-strings [tokens]
+  )
 
 ;;; Very yikes.
 ;; parse-sexp :: Vec -> Seq(string) -> Vec(Vec(Tokens) Seq(string))
@@ -120,15 +107,17 @@
       (cond
         (= cur-token "(")
         ;; (apply recur (into acc (parse-sexp (rest tokens))))
-        (let [[next-acc next-tokens] (parse-sexp [] (rest tokens))]
+        (let [[next-acc next-tokens] (parse-reduce-sexp [] (rest tokens))]
           (recur next-acc next-tokens))
-        (or (= cur-token ")")
+        (or (= ")" cur-token)
+            (= nil cur-token)
             (empty? tokens))
         [acc (rest tokens)]
         :else
         (recur (into acc [(parse-token cur-token)]) (rest tokens))))))
 
-(defn parse-sexp? []
+(defn parse-sexp? [expression]
+  (first (parse-reduce-sexp [] (tokenize expression))))
 
 (defn balance-reducer [acc next]
   (if (= acc false)
@@ -138,10 +127,10 @@
       (inc acc)
       (= next \))
       (do
-        (dec acc) ;Decrement acc, then check if we have too many closes.
-        (if (> 0 acc)
+        ;; (dec acc) ;Decrement acc, then check if we have too many closes.
+        (if (> 0 (dec acc))
           false
-          acc))
+          (dec acc)))
       :else ;it's a non-paren, return acc so we keep going
       acc)))
 

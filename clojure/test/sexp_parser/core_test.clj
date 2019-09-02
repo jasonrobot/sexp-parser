@@ -3,76 +3,52 @@
             [sexp-parser.core :refer :all]))
 
 (deftest parse-bool?-test
-  (is (= (:data (parse-bool? "T" 0)) true))
-  (is (= (:data (parse-bool? "NIL" 0)) false)))
+  (is (= (parse-bool? "T") true))
+  (is (= (parse-bool? "NIL") false)))
 
 (deftest parse-string?-test
-  (is (= (:data (parse-string? "\"asdf\"" 0)) "asdf"))
-  (is (= (:next (parse-string? "\"asdf\"" 0)) 6))
+  (is (= (parse-string? "\"asdf\"") "asdf"))
 
-  (is (= (:data (parse-string? "\"asdf\")" 0)) "asdf") "parse string \"asdf)\" data")
-  (is (= (:next (parse-string? "\"asdf\")" 0)) 6) "parse string \"asdf)\" next")
+  (is (= (parse-string? "\"asdf\")") "asdf") "parse string \"asdf)\" data")
 
-  (is (= (:data (parse-string? "'asdf'" 0)) nil) "string with single quotes")
-  (is (= (:data (parse-string? "\"\\\"\"" 0)) "\"") "an escaped quote")
-  (is (= (:data (parse-string? "\"\\\")" 0)) "\\") "single literal backslash"))
+  (is (= (parse-string? "'asdf'") nil) "string with single quotes")
+  (is (= (parse-string? "\"\\\"\"") "\"") "an escaped quote")
+  (is (= (parse-string? "\"\\\"") "\\") "single literal backslash"))
 
 (deftest parse-symbol?-test
-  (is (= (:data (parse-symbol? ":foo" 0)) :foo) "symbol data")
-  (is (= (:next (parse-symbol? ":foo" 0)) 4) "symbol length")
+  (is (= (parse-symbol? ":foo") :foo) "symbol data")
 
-  (is (= (:data (parse-symbol? ":bar)" 0)) :bar) "symbol data trailing paren")
-  (is (= (:next (parse-symbol? ":bar)" 0)) 4) "symbol next trailing paren")
-
-  (is (= (:data (parse-symbol? ":cAsEsEnSiTiVe" 0)) :cAsEsEnSiTiVe)
-      "should preserve case")
-  (is (= (:data (parse-symbol? "asdf" 0)) nil) "symbol without colon" ))
+  (is (= (parse-symbol? ":cAsEsEnSiTiVe") :cAsEsEnSiTiVe) "should preserve case")
+  (is (= (parse-symbol? "asdf") nil) "symbol without colon" ))
 
 (deftest parse-number?-test
-  (is (== (:data (parse-number? "12" 0)) 12) "data 12")
-  (is (= (:next (parse-number? "12" 0)) 2) "length 12 is 2")
+  (is (== (parse-number? "12") 12) "data 12")
+  (is (== (parse-number? "-1") -1) "data -1")
+  (is (== (parse-number? "0.5") 0.5) "data 0.5")
+  (is (== (parse-number? ".5") 0.5) "data .5")
+  (is (== (parse-number? "-0.5") -0.5) "data -0.5"))
 
-  (is (== (:data (parse-number? "-1" 0)) -1) "data -1")
-  (is (= (:next (parse-number? "-2" 0)) 2) "length -1 is 2")
+(deftest parse-token-test
+  (is (== (parse-token "1") 1)))
 
-  (is (== (:data (parse-number? "0.5" 0)) 0.5) "data 0.5")
-  (is (= (:next (parse-number? "0.5" 0)) 3) "length 0.5 is 3")
-
-  (is (== (:data (parse-number? ".5" 0)) 0.5) "data .5")
-  (is (= (:next (parse-number? ".5" 0)) 2) "length .5 is 2")
-
-  (is (== (:data (parse-number? "-0.5" 0)) -0.5) "data -0.5")
-  (is (= (:next (parse-number? "-0.5" 0)) 4) "length -0.5 is 4")
-
-  ;; (is (== (:data (parse-number? "foo 12 bar" 0)) 12) "data \"foo 12 bar\" is 12")
-  ;; (is (= (:next (parse-number? "foo 12 bar" 0)) 6) "length \"foo 12 bar\" is 6")
-
-  (is (== (:data (parse-number? "2)" 0)) 2) "trailing paren")
-  (is (= (:next (parse-number? "2)" 0)) 1) "trailing paren length"))
+(deftest tokenize-test
+  (is (= (tokenize "1 2 3") ["1" "2" "3"]))
+  (is (= (tokenize "()") ["(" ")"]))
+  (is (= (tokenize "\"foo bar\"") ["foo bar"])))
 
 (deftest parse-sexp?-test
-  (is (= (:data (parse-sexp? "(1 2 3)" 0)) [1 2 3]))
-  (is (= (:next (parse-sexp? "(1 2 3)" 0)) 7))
-
-  (is (= (:data (parse-sexp? "()" 0)) []))
-  (is (= (:next (parse-sexp? "()" 0)) 2))
-
-  (is (= (:data (parse-sexp? "(1 (2 3) 4)" 0)) [1 [2 3] 4]))
-  (is (= (:next (parse-sexp? "(1 (2 3) 4)" 0)) 11));
-
-  (is (= (:data (parse-sexp? "(())" 0)) [[]]))
-  (is (= (:next (parse-sexp? "(())" 0)) 4))
-
-  (is (= (:data (parse-sexp? "( ( ) )" 0)) [[]]))
-  (is (= (:next (parse-sexp? "( ( ) )" 0)) 7))
-
-  (is (= (:data (parse-sexp? "(() () ())" 0)) [[] [] []]))
-  (is (= (:data (parse-sexp? "( ( 2 ) 3)" 0)) [[2] 3]))
+  (is (== (parse-sexp? "(1 2 3)") [1 2 3]))
+  (is (= (parse-sexp? "()") []))
+  (is (= (parse-sexp? "(1 (2 3) 4)") [1 [2 3] 4]))
+  (is (= (parse-sexp? "(())") [[]]))
+  (is (= (parse-sexp? "( ( ) )") [[]]))
+  (is (= (parse-sexp? "(() () ())") [[] [] []]))
+  (is (= (parse-sexp? "( ( 2 ) 3)") [[2] 3]))
 
   (testing "key value objects"
-    (is (= (:data (parse-sexp? "(:a 1)" 0)) {:a 1}))
-    (is (= (:data (parse-sexp? "(:foo 123 :bar \"asd\")" 0)) {:foo 123 :bar "asd"}))
-    (is (= (:data (parse-sexp? "(:a (:b (:c 69)))" 0)) {:a {:b {:c 69}}}))))
+    (is (= (parse-sexp? "(:a 1)") {:a 1}))
+    (is (= (parse-sexp? "(:foo 123 :bar \"asd\")") {:foo 123 :bar "asd"}))
+    (is (= (parse-sexp? "(:a (:b (:c 69)))") {:a {:b {:c 69}}}))))
 
 ;; Are these internal?
 
@@ -121,7 +97,7 @@
   (is (= (encode-array [[1 2] [3 4]]) "((1 2) (3 4))")))
 
 (deftest encode-test
-  (is (= (encode {:number 123,
+  (is (= (encode {:number 123
                   :digits ["1" "2" "3"]
                   :attributes {:even false
                                :positive true}})
