@@ -2,87 +2,19 @@
   (:require [clojure.test :refer :all]
             [sexp-parser.core :refer :all]))
 
-(deftest parse-bool?-test
-  (is (= (parse-bool? "T") true))
-  (is (= (parse-bool? "NIL") false)))
-
-(deftest parse-string?-test
-  (is (= (parse-string? "\"asdf\"") "asdf"))
-
-  (is (= (parse-string? "\"asdf\")") "asdf") "parse string \"asdf)\" data")
-
-  (is (= (parse-string? "'asdf'") nil) "string with single quotes")
-  (is (= (parse-string? "\"\\\"\"") "\"") "an escaped quote")
-  (is (= (parse-string? "\"\\\"") "\\") "single literal backslash"))
-
-(deftest parse-symbol?-test
-  (is (= (parse-symbol? ":foo") :foo) "symbol data")
-
-  (is (= (parse-symbol? ":cAsEsEnSiTiVe") :cAsEsEnSiTiVe) "should preserve case")
-  (is (= (parse-symbol? "asdf") nil) "symbol without colon" ))
-
-(deftest parse-number?-test
-  (is (== (parse-number? "12") 12) "data 12")
-  (is (== (parse-number? "-1") -1) "data -1")
-  (is (== (parse-number? "0.5") 0.5) "data 0.5")
-  (is (== (parse-number? ".5") 0.5) "data .5")
-  (is (== (parse-number? "-0.5") -0.5) "data -0.5"))
-
-(deftest parse-token-test
-  (is (== (parse-token "1") 1)))
-
-(deftest tokenize-test
-  (is (= (tokenize "1 2 3") ["1" "2" "3"]))
-  (is (= (tokenize "()") ["(" ")"]))
-  (is (= (tokenize "\"foo bar\"") ["foo bar"])))
-
-(deftest parse-sexp?-test
-  (is (== (parse-sexp? "(1 2 3)") [1 2 3]))
-  (is (= (parse-sexp? "()") []))
-  (is (= (parse-sexp? "(1 (2 3) 4)") [1 [2 3] 4]))
-  (is (= (parse-sexp? "(())") [[]]))
-  (is (= (parse-sexp? "( ( ) )") [[]]))
-  (is (= (parse-sexp? "(() () ())") [[] [] []]))
-  (is (= (parse-sexp? "( ( 2 ) 3)") [[2] 3]))
+(deftest parse-test
+  (is (= (parse "(1 2 3)") '(1 2 3)))
+  (is (= (parse "()") '()))
+  (is (= (parse "(1 (2 3) 4)") '(1 (2 3) 4)))
+  (is (= (parse "(())") '(())))
+  (is (= (parse "( ( ) )") '(())))
+  (is (= (parse "(() () ())") '(() () ())))
+  (is (= (parse "( ( 2 ) 3)") '((2) 3)))
 
   (testing "key value objects"
-    (is (= (parse-sexp? "(:a 1)") {:a 1}))
-    (is (= (parse-sexp? "(:foo 123 :bar \"asd\")") {:foo 123 :bar "asd"}))
-    (is (= (parse-sexp? "(:a (:b (:c 69)))") {:a {:b {:c 69}}}))))
-
-;; Are these internal?
-
-;; test( 'tryParseObject', ( t ) => {
-;; let array = [':foo', 123, ':bar', 'asd'];
-;; let expected = { foo: 123, bar: 'asd' };
-;; t.deepEqual( tryParseObject( array ), expected );
-
-;; array = [ ':A', [ ':B', [ ':C', 69 ] ] ];
-;; expected = { A: [ ':B', [ ':C', 69 ] ] };
-;; t.deepEqual( tryParseObject( array ), expected,
-;; 'should only do the first level of an array' );
-
-(deftest chomp-whitespace-test
-  (is (= (chomp-whitespace " a" 0) 1)))
-
-(deftest find-end-of-symbol-test
-  (is (= (find-end-of-symbol "a " 0) 1)))
-
-(deftest parens-balanced?-test
-  (is (= (parens-balanced? "()") true))
-  (is (= (parens-balanced? "(()()(()))") true))
-  (is (= (parens-balanced? "(works (with ( stuff )in )between )") true))
-  (is (= (parens-balanced? ")(") false))
-  (is (= (parens-balanced? "(())))(((())") false))
-  (is (= (parens-balanced? "(") false))
-  (is (= (parens-balanced? ")") false))
-  (is (= (parens-balanced? "())") false))
-  (is (= (parens-balanced? "(()") false)))
-
-(deftest quotes-balanced?-test
-  (is (= (quotes-balanced? "") true))
-  (is (= (quotes-balanced? "\"\"") true))
-  (is (= (quotes-balanced? "\"\"\"") false)))
+    (is (= (parse "(:a 1)") {:a 1}))
+    (is (= (parse "(:foo 123 :bar \"asd\")") {:foo 123 :bar "asd"}))
+    (is (= (parse "(:a (:b (:c 69)))") {:a {:b {:c 69}}}))))
 
 (deftest encode-atom-test
   (is (= (encode-atom "asd") "\"asd\""))
