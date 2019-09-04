@@ -31,16 +31,17 @@
  * @param {string} char The character being checked
  * @return {boolean}
  */
-const isEndOfSymbol = ( char ) => {
+function isEndOfSymbol( char ) {
     return ( char === undefined ||
              char === ' ' ||
              char === ')' );
 };
 
-const findEndOfSymbol = (string, position) => {
+function findEndOfSymbol(string, position) {
     const nextSpace = string.indexOf( ' ', position );
     const nextParen = string.indexOf( ')', position );
 
+    // There is no end of next symbol, so our terminus is the end of the whole string.
     if ( nextSpace === -1 && nextParen === -1 ) {
         return string.length;
     }
@@ -57,7 +58,7 @@ const findEndOfSymbol = (string, position) => {
  *
  * @return {int} Index of the next non-space char.
  */
-const chompWhitespace = ( string, position ) => {
+function chompWhitespace( string, position ) {
     while ( string[position] === ' ' ) {
         position += 1;
     }
@@ -70,11 +71,11 @@ const chompWhitespace = ( string, position ) => {
  * @param {any|null} data
  * @param {int} next Index where to resume parsing.
  */
-const ParserResult = ( data, next ) => {
+function ParserResult( data, next ) {
     return { data, next };
 };
 
-const tryParseBoolean = ( expression, position ) => {
+function tryParseBoolean( expression, position ) {
     if ( expression[ position ].toUpperCase() === 'T' &&
          isEndOfSymbol( expression[ position + 1 ] ) ) {
         return ParserResult( true, position + 1 );
@@ -90,7 +91,7 @@ const tryParseBoolean = ( expression, position ) => {
 /**
  * Parse a string if possible.
  */
-const tryParseString = ( expression, position ) => {
+function tryParseString( expression, position ) {
     if ( expression[ position ] !== '"' ) {
         return ParserResult( null, position );
     }
@@ -112,7 +113,7 @@ const tryParseString = ( expression, position ) => {
  *
  * TODO: Use symbols to let objects be declared?
  */
-const tryParseSymbol = ( expression, position ) => {
+function tryParseSymbol( expression, position ) {
     if ( expression[ position ] !== ':' ) {
         return ParserResult( null, position );
     }
@@ -129,7 +130,7 @@ const tryParseSymbol = ( expression, position ) => {
 /**
  * Parse a number if possible.
  */
-const tryParseNumber = ( expression, position ) => {
+function tryParseNumber( expression, position ) {
     // /^[\d.-]
     const startPosition = position;
 
@@ -144,7 +145,7 @@ const tryParseNumber = ( expression, position ) => {
 /**
  * Given [ ':A', 1, ':B', 2 ], should produce { a: 1, b: 2 }
  */
-const tryParseObject = ( array ) => {
+function tryParseObject( array ) {
     if ( array.length % 2 !== 0 ) {
         return array;
     }
@@ -170,7 +171,7 @@ const tryParseObject = ( array ) => {
  *
  * @return {ParserResult} Data will be null if an s-expression was not found.
  */
-const tryParseSexp = ( expression, position = 0 ) => {
+function tryParseSexp( expression, position = 0 ) {
     if ( expression[ position ] !== '(' ) {
         return ParserResult( null, position );
     }
@@ -250,7 +251,7 @@ const tryParseSexp = ( expression, position = 0 ) => {
 /**
  * Check if parens are balanced in a string.
  */
-const isParensBalanced = ( expression ) => {
+function isParensBalanced( expression ) {
     let netBalance = 0;
     for ( let position in expression ) {
         let char = expression[position];
@@ -271,7 +272,7 @@ const isParensBalanced = ( expression ) => {
 /**
  * Check if there are an even number of quotes in a string.
  */
-const isQuotesBalanced = ( expression ) => {
+function isQuotesBalanced( expression ) {
     const matches = expression.match( /"/g );
     return matches === null || matches.length % 2 === 0;
 };
@@ -283,7 +284,7 @@ const isQuotesBalanced = ( expression ) => {
  *
  * @return {Array} Regular javascript-friendly data.
  */
-const parseExpression = ( expression ) => {
+function parseExpression( expression ) {
     if ( typeof expression != 'string' ) {
         throw 'You can only parse strings, ya dingus.';
     }
@@ -313,7 +314,7 @@ const parseExpression = ( expression ) => {
 /********************************************************************/
 
 
-const encodeAtom = ( atom ) => {
+function encodeAtom( atom ) {
     if ( typeof atom === 'string' ) {
         return '"' + atom + '"';
     }
@@ -326,7 +327,7 @@ const encodeAtom = ( atom ) => {
     return String(atom);
 };
 
-const encodeArray = ( array ) => {
+function encodeArray( array ) {
     let contents = '';
     for ( let i = 0; i < array.length; i++ ) {
         contents += encode( array[i] ) + ' ';
@@ -338,7 +339,7 @@ const encodeArray = ( array ) => {
 /**
  * Encode a javascript object.
  */
-const encode = ( object ) => {
+function encode( object ) {
     if ( Array.isArray( object ) ) {
         return encodeArray( object );
     }
